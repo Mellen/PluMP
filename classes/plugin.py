@@ -11,9 +11,11 @@ class plugin(object):
 
     def attach(self, pump):
         if not callable(getattr(self, 'handleBroadcast')):
+            self.killThreads()
             raise AttributeError('You must declare handleBroadcast as a method of a plugin class')
 
         if not callable(getattr(self, 'handleMessage')):
+            self.killThreads()
             raise AttributeError('You must declare handleMessage as a method of a plugin class')
 
         self.zmqMPPushSocket = self.zmqContext.socket(zmq.PUSH)
@@ -27,6 +29,10 @@ class plugin(object):
         self.messageThread = threading.Thread(target=self.messageLoop)
         self.messageThread.start()
 
+    def killThreads(self):
+        self.running = False
+        self.messageThread.abort()
+
     def messageLoop(self):
         while self.running:
             
@@ -34,22 +40,25 @@ class plugin(object):
             broadcastMessage = None
 
             try:
-                specificMessage = self.zmqMPPullSocket.recv_pyobj(flag=zmq.NOBLOCK)
-            except zmq.core.error.ZMQError,e:
+                specificMessage = self.zmqMPPullSocket.recv_pyobj(flags=zmq.NOBLOCK)
+            except zmq.ZMQError,e:
                 if 'Resource temporarily unavailable' in e:
-                    pass
+                    print 'rtu'
                 else:
+                    print e
+                    self.running = False
                     raise
 
             if specificMessage is not None:
                 self.handleMessage(specificMessage)
 
             try:
-                broadcastMessage = self.zmqBroadcast.recv_pyobj(flag=zmq.NOBLOCK)
-            except zmq.core.error.ZMQError,e:
+                broadcastMessage = self.zmqBroadcast.recv_pyobj(flags=zmq.NOBLOCK)
+            except zmq.ZMQError,e:
                 if 'Resource temporarily unavailable' in e:
                     pass
                 else:
+                    self.running = False
                     raise
 
             if broadcastMessage is not None:
