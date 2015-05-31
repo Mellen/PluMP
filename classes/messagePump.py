@@ -48,7 +48,11 @@ class messagePump(plugin):
         
     def killThreads(self):
         super(messagePump, self).killThreads()
-        self.dispatchThread.abort()
+        #todo: stop all plugins
+        try:
+            self.dispatchThread.join()
+        except RuntimeError:
+            pass
 
     def handleMessage(self, message):
         pass
@@ -64,7 +68,7 @@ class messagePump(plugin):
                 try:
                     msg = socket.recv_pyobj(flags=zmq.NOBLOCK)
                 except zmq.ZMQError,e:
-                    if 'Resource temporarily unavailable' in e:
+                    if 'Resource temporarily unavailable' == str(e):
                         pass
                     else:
                         self.killThreads()

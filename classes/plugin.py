@@ -31,7 +31,7 @@ class plugin(object):
 
     def killThreads(self):
         self.running = False
-        self.messageThread.abort()
+        self.messageThread.join()
 
     def messageLoop(self):
         while self.running:
@@ -42,10 +42,9 @@ class plugin(object):
             try:
                 specificMessage = self.zmqMPPullSocket.recv_pyobj(flags=zmq.NOBLOCK)
             except zmq.ZMQError,e:
-                if 'Resource temporarily unavailable' in e:
-                    print 'rtu'
-                else:
-                    print e
+                if 'Resource temporarily unavailable' == str(e):
+                    pass
+                else:                    
                     self.running = False
                     raise
 
@@ -55,7 +54,7 @@ class plugin(object):
             try:
                 broadcastMessage = self.zmqBroadcast.recv_pyobj(flags=zmq.NOBLOCK)
             except zmq.ZMQError,e:
-                if 'Resource temporarily unavailable' in e:
+                if 'Resource temporarily unavailable' == str(e):
                     pass
                 else:
                     self.running = False
