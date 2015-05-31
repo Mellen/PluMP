@@ -1,0 +1,3 @@
+[submodule "PluMP.wiki"]
+	path = PluMP.wiki
+	url = https://github.com/Mellen/PluMP.wiki.git
