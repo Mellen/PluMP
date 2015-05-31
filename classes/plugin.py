@@ -11,10 +11,10 @@ class plugin(object):
 
     def attach(self, pump):
         if not callable(getattr(self, 'handleBroadcast')):
-            throw AttributeError('You must declare handleBroadcast as a method of a plugin class')
+            raise AttributeError('You must declare handleBroadcast as a method of a plugin class')
 
         if not callable(getattr(self, 'handleMessage')):
-            throw AttributeError('You must declare handleMessage as a method of a plugin class')
+            raise AttributeError('You must declare handleMessage as a method of a plugin class')
 
         self.zmqMPPushSocket = self.zmqContext.socket(zmq.PUSH)
         self.zmqMPPushSocket.bind('inproc://' + self.instanceName + '_push')
