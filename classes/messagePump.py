@@ -1,6 +1,6 @@
-from plugin import plugin
 import zmq
 import threading
+from watchdog.observers import Observer
 
 class messagePump(plugin):
     
@@ -11,6 +11,10 @@ class messagePump(plugin):
         self.broadcastName = 'inproc://'+self.instanceName
         self.dispatchThread = threading.Thread(target=self.receiving)
         self.dispatchThread.start()
+        self.connectPlugins()
+
+    def connectPlugins(self):
+        pass
 
     def connect(self, pluginName):
         pullSocket = self.zmqContext.socket(zqm.PULL)
@@ -31,12 +35,12 @@ class messagePump(plugin):
                 
                 try:
                     msg = socket.recv_pyobj(flag=zmq.NOBLOCK)
-            except zmq.core.error.ZMQError,e:
-                if 'Resource temporarily unavailable' in e:
-                    pass
-                else:
-                    raise
-
+                except zmq.core.error.ZMQError,e:
+                    if 'Resource temporarily unavailable' in e:
+                        pass
+                    else:
+                        raise
+                    
                 if msg is not None:
                     self.pumpMessage(msg)
 
