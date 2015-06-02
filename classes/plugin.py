@@ -2,6 +2,10 @@ import zmq
 import threading
 import time
 
+def message(function):
+    function._isMessage = True
+    return function
+
 class plugin(object):
     
     def __init__(self, instanceName='default'):

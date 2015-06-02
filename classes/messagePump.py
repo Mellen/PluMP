@@ -1,18 +1,19 @@
-from plugin import plugin
+from plugin import plugin, message
 import inspect
 import imp
 import os
 import inspect
 import zmq
 import threading
+import time
 from watchdog.observers import Observer
 
 class messagePump(plugin):
     
+    messageList = {}
+
     def __init__(self):
         super(messagePump, self).__init__()
-        self.pluginPushSockets = {}
-        self.pluginPullSockets = []
         self.broadcastName = 'inproc://'+self.instanceName
         self.broadcastSocket = self.zmqContext.socket(zmq.PUB)
         self.broadcastSocket.bind(self.broadcastName)
@@ -22,6 +23,9 @@ class messagePump(plugin):
         self.dispatchThread.start()
 
     def connectPlugins(self):
+        self.pluginList = [self]
+        self.pluginPushSockets = {}
+        self.pluginPullSockets = []
         directory = '.'
         filename = inspect.getfile(self.__class__)
         filenameParts = filename.split('/')
@@ -34,7 +38,8 @@ class messagePump(plugin):
             for name, obj in inspect.getmembers(mod):
                 if inspect.isclass(obj) and issubclass(obj, plugin):
                     plug = obj()
-                    plug.attach(self)            
+                    plug.attach(self)
+                    self.pluginList.append(plug)
 
     def connect(self, pluginName):
         pullSocket = self.zmqContext.socket(zmq.PULL)
@@ -76,9 +81,16 @@ class messagePump(plugin):
                 if msg is not None:
                     self.pumpMessage(msg)
 
+            time.sleep(0.001)
+
     def pumpMessage(self):
         if msg['isBroadcast']:
             self.broadcastSocket.send_json(msg)
         else:
             socket = self.pluginPushSockets[msg['to']]
             socket.send_json(msg)
+
+
+    @message
+    def plugins(self):
+        pass
