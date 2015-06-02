@@ -14,10 +14,6 @@ class plugin(object):
             self.killThreads()
             raise AttributeError('You must declare handleBroadcast as a method of a plugin class')
 
-        if not callable(getattr(self, 'handleMessage')):
-            self.killThreads()
-            raise AttributeError('You must declare handleMessage as a method of a plugin class')
-
         self.zmqMPPushSocket = self.zmqContext.socket(zmq.PUSH)
         self.zmqMPPushSocket.bind('inproc://' + self.instanceName + '_push')
         pumpSocketName = pump.connect(self.instanceName)
@@ -64,3 +60,31 @@ class plugin(object):
                 self.handleBroadcast(broadcastMessage)
                 
             time.sleep(0.001)
+
+    def handleMessage(self, message):
+        method = None
+        try:
+            method = getattr(self, message['methodName'])
+        except AttributeError:
+            errmsg = {}
+            errmsg['from'] = self.instanceName
+            errmsg['to'] = message['from']
+            errmsg['methodName'] = 'error'
+            errmsg['parameters'] = {'message': self.instanceName + ' does not accept ' + message['methodName'] + ' messages.'}
+            errmsg['isBroadcast'] = False
+            self.send(errmsg)
+            
+        if method is not None:
+            result = method(**message['parameters'])
+            if 'callback' in message:
+                callback = {}
+                callback['from'] = self.instanceName
+                callback['to'] = message['to']
+                callback['methodName'] = message['callback']
+                callback['parameters'] = result
+                callback['isBroadcast'] = False
+                
+                self.send(callback)
+
+    def send(self, message):
+        self.zmqMPPushSocket.send_pyobj(message)

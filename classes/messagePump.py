@@ -1,4 +1,5 @@
 from plugin import plugin
+import inspect
 import imp
 import os
 import inspect
@@ -28,11 +29,12 @@ class messagePump(plugin):
             directory = '/'.join(filenameParts[:-1])
         pluginFiles = [pf for pf in os.listdir(directory) if pf != 'messagePump.py' and pf != 'plugin.py' and pf.endswith('.py') and not pf.startswith('__') and not pf.startswith('.#')]
         for pluginFile in pluginFiles:
-            className = pluginFile.split('/')[-1].split('.')[0]
-            mod = imp.load_source(className, pluginFile)
-            cls = getattr(mod, className)
-            plug = cls()
-            plug.attach(self)            
+            moduleName = pluginFile.split('/')[-1].split('.')[0]
+            mod = imp.load_source(moduleName, pluginFile)
+            for name, obj in inspect.getmembers(mod):
+                if inspect.isclass(obj) and issubclass(obj, plugin):
+                    plug = obj()
+                    plug.attach(self)            
 
     def connect(self, pluginName):
         pullSocket = self.zmqContext.socket(zmq.PULL)
@@ -53,9 +55,6 @@ class messagePump(plugin):
             self.dispatchThread.join()
         except RuntimeError:
             pass
-
-    def handleMessage(self, message):
-        pass
 
     def handleBroadcast(self, message):
         pass
@@ -78,4 +77,8 @@ class messagePump(plugin):
                     self.pumpMessage(msg)
 
     def pumpMessage(self):
-        pass
+        if msg['isBroadcast']:
+            self.broadcastSocket.send_json(msg)
+        else:
+            socket = self.pluginPushSockets[msg['to']]
+            socket.send_json(msg)
